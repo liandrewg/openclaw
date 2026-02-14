@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenClaw Architecture</title>
+<style>
+/* ── Reset & Variables ─────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --sidebar-w:280px;
+  --header-h:56px;
+  --transition:0.25s ease;
+}
+[data-theme="dark"]{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#1c2128;--bg4:#21262d;
+  --fg:#e6edf3;--fg2:#8b949e;--fg3:#484f58;
+  --accent:#58a6ff;--accent2:#1f6feb;--accent-dim:rgba(88,166,255,.12);
+  --border:#30363d;--code-bg:#161b22;
+  --success:#3fb950;--warn:#d29922;--danger:#f85149;
+  --shadow:0 1px 3px rgba(0,0,0,.4);
+  --svg-node:#1f6feb;--svg-node-fg:#fff;--svg-line:#30363d;
+}
+[data-theme="light"]{
+  --bg:#ffffff;--bg2:#f6f8fa;--bg3:#eaeef2;--bg4:#d0d7de;
+  --fg:#1f2328;--fg2:#656d76;--fg3:#8b949e;
+  --accent:#0969da;--accent2:#0550ae;--accent-dim:rgba(9,105,218,.08);
+  --border:#d0d7de;--code-bg:#f6f8fa;
+  --success:#1a7f37;--warn:#9a6700;--danger:#cf222e;
+  --shadow:0 1px 3px rgba(31,35,40,.12);
+  --svg-node:#0969da;--svg-node-fg:#fff;--svg-line:#d0d7de;
+}
+html{scroll-behavior:smooth;scroll-padding-top:calc(var(--header-h) + 16px)}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  background:var(--bg);color:var(--fg);line-height:1.6;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ── Header ────────────────────────────────────────────────────── */
+.header{position:fixed;top:0;left:0;right:0;height:var(--header-h);
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 16px;z-index:100;gap:12px;
+  box-shadow:var(--shadow)}
+.header .logo{font-size:1.2rem;font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.header .logo span{color:var(--accent)}
+.hamburger{display:none;background:none;border:none;color:var(--fg);cursor:pointer;
+  padding:4px;font-size:1.4rem;line-height:1}
+.search-box{flex:1;max-width:360px;position:relative}
+.search-box input{width:100%;padding:6px 12px 6px 32px;border-radius:6px;
+  border:1px solid var(--border);background:var(--bg);color:var(--fg);
+  font-size:.875rem;outline:none;transition:border var(--transition)}
+.search-box input:focus{border-color:var(--accent)}
+.search-box svg{position:absolute;left:8px;top:50%;transform:translateY(-50%);
+  width:16px;height:16px;color:var(--fg3)}
+.header-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.theme-toggle{background:none;border:1px solid var(--border);color:var(--fg);
+  border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.85rem;
+  display:flex;align-items:center;gap:4px;transition:all var(--transition)}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── Sidebar ───────────────────────────────────────────────────── */
+.sidebar{position:fixed;top:var(--header-h);left:0;bottom:0;width:var(--sidebar-w);
+  background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;
+  padding:12px 0;z-index:90;transition:transform var(--transition)}
+.sidebar::-webkit-scrollbar{width:4px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--fg3);border-radius:2px}
+.nav-section{margin-bottom:4px}
+.nav-section-title{display:flex;align-items:center;justify-content:space-between;
+  padding:6px 16px;font-size:.7rem;font-weight:600;text-transform:uppercase;
+  letter-spacing:.05em;color:var(--fg3);cursor:pointer;user-select:none}
+.nav-section-title:hover{color:var(--fg2)}
+.nav-section-title .chevron{transition:transform var(--transition);font-size:.65rem}
+.nav-section.collapsed .chevron{transform:rotate(-90deg)}
+.nav-section.collapsed .nav-links{display:none}
+.nav-links{list-style:none}
+.nav-links a{display:block;padding:5px 16px 5px 24px;font-size:.82rem;
+  color:var(--fg2);transition:all var(--transition);border-left:2px solid transparent}
+.nav-links a:hover{color:var(--fg);background:var(--accent-dim);text-decoration:none}
+.nav-links a.active{color:var(--accent);border-left-color:var(--accent);
+  background:var(--accent-dim);font-weight:500}
+
+/* ── Main Content ──────────────────────────────────────────────── */
+.main{margin-left:var(--sidebar-w);margin-top:var(--header-h);padding:32px 40px 80px;
+  max-width:960px}
+.section{margin-bottom:48px;padding-top:8px}
+.section h2{font-size:1.6rem;font-weight:700;margin-bottom:8px;
+  padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.section h2 .sec-icon{font-size:1.1rem}
+.section h3{font-size:1.15rem;font-weight:600;margin:20px 0 8px;color:var(--fg)}
+.section h4{font-size:.95rem;font-weight:600;margin:14px 0 6px;color:var(--fg2)}
+.section p,.section li{font-size:.92rem;color:var(--fg);margin-bottom:6px}
+.section ul,.section ol{padding-left:20px;margin-bottom:12px}
+.section li{margin-bottom:4px}
+
+/* ── Code Blocks ───────────────────────────────────────────────── */
+pre{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;
+  padding:14px 16px;overflow-x:auto;font-size:.8rem;line-height:1.55;
+  margin:12px 0;color:var(--fg)}
+code{font-family:"SF Mono",Monaco,Consolas,monospace;font-size:.82rem}
+p code,li code{background:var(--code-bg);padding:2px 6px;border-radius:4px;
+  border:1px solid var(--border);font-size:.78rem}
+
+/* ── Tables ────────────────────────────────────────────────────── */
+.table-wrap{overflow-x:auto;margin:12px 0}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th,td{padding:8px 12px;text-align:left;border:1px solid var(--border)}
+th{background:var(--bg3);font-weight:600;white-space:nowrap}
+td{background:var(--bg)}
+tr:hover td{background:var(--accent-dim)}
+
+/* ── Cards ─────────────────────────────────────────────────────── */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin:14px 0}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+  padding:14px;transition:all var(--transition)}
+.card:hover{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.card h4{margin:0 0 4px;font-size:.9rem;color:var(--accent)}
+.card p{margin:0;font-size:.8rem;color:var(--fg2)}
+
+/* ── Tag chips ─────────────────────────────────────────────────── */
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.tag{padding:2px 10px;border-radius:12px;font-size:.72rem;font-weight:500;
+  border:1px solid var(--border);background:var(--bg3);color:var(--fg2)}
+.tag.green{border-color:var(--success);color:var(--success);background:rgba(63,185,80,.08)}
+.tag.blue{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.tag.yellow{border-color:var(--warn);color:var(--warn);background:rgba(210,153,34,.08)}
+
+/* ── SVG Diagram ───────────────────────────────────────────────── */
+.diagram-wrap{overflow-x:auto;margin:16px 0;padding:8px 0}
+.diagram-wrap svg{display:block;margin:0 auto}
+.diagram-wrap svg .node{cursor:pointer;transition:all .2s}
+.diagram-wrap svg .node:hover rect,.diagram-wrap svg .node:hover .node-bg{
+  stroke:var(--accent);stroke-width:2.5;filter:drop-shadow(0 0 6px var(--accent))}
+.diagram-wrap svg text{fill:var(--svg-node-fg);font-family:inherit;pointer-events:none}
+.diagram-wrap svg .label{fill:var(--fg);font-size:11px}
+.diagram-wrap svg .sublabel{fill:var(--fg2);font-size:9px}
+
+/* ── Data-flow animation ───────────────────────────────────────── */
+.flow-steps{position:relative;margin:16px 0}
+.flow-step{display:flex;align-items:flex-start;gap:14px;margin-bottom:0;
+  padding:12px 14px;border-left:2px solid var(--border);position:relative;
+  opacity:.45;transition:all .4s ease}
+.flow-step.active{opacity:1;border-left-color:var(--accent)}
+.flow-step .step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;
+  background:var(--bg3);border:2px solid var(--border);display:flex;
+  align-items:center;justify-content:center;font-size:.75rem;font-weight:700;
+  color:var(--fg2);transition:all .3s;position:relative;left:-16px}
+.flow-step.active .step-num{background:var(--accent);border-color:var(--accent);color:#fff}
+.flow-step .step-body{min-width:0}
+.flow-step .step-title{font-weight:600;font-size:.88rem}
+.flow-step .step-desc{font-size:.8rem;color:var(--fg2);margin-top:2px}
+.flow-controls{display:flex;gap:8px;margin:14px 0}
+.flow-controls button{padding:5px 16px;border-radius:6px;border:1px solid var(--border);
+  background:var(--bg2);color:var(--fg);cursor:pointer;font-size:.8rem;
+  transition:all var(--transition)}
+.flow-controls button:hover{border-color:var(--accent);color:var(--accent)}
+.flow-controls button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.flow-controls button.primary:hover{background:var(--accent2)}
+
+/* ── Directory Tree ────────────────────────────────────────────── */
+.dir-tree{font-family:"SF Mono",Monaco,Consolas,monospace;font-size:.78rem;
+  line-height:1.6;background:var(--code-bg);border:1px solid var(--border);
+  border-radius:8px;padding:14px 16px;margin:12px 0}
+.dir-tree details{margin-left:16px}
+.dir-tree summary{cursor:pointer;color:var(--accent);list-style:none;
+  user-select:none;padding:1px 0}
+.dir-tree summary::-webkit-details-marker{display:none}
+.dir-tree summary::before{content:"";display:inline-block;width:16px;height:16px;
+  margin-right:4px;vertical-align:middle;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%2358a6ff'%3E%3Cpath d='M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25v-8.5A1.75 1.75 0 0014.25 3H7.5a.25.25 0 01-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75z'/%3E%3C/svg%3E") no-repeat center/14px}
+.dir-tree details[open]>summary::before{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%2358a6ff'%3E%3Cpath d='M.513 1.513A1.75 1.75 0 011.75 1h3.5c.55 0 1.07.26 1.4.7l.9 1.2a.25.25 0 00.2.1h6.5A1.75 1.75 0 0116 4.75v8.5A1.75 1.75 0 0114.25 15H1.75A1.75 1.75 0 010 13.25V2.75c0-.464.184-.91.513-1.237z'/%3E%3Cpath d='M3 8a.5.5 0 01.5-.5h9a.5.5 0 010 1h-9A.5.5 0 013 8z' fill='%23fff'/%3E%3C/svg%3E")}
+.dir-tree .file{margin-left:16px;color:var(--fg2);padding:1px 0}
+.dir-tree .file::before{content:"";display:inline-block;width:16px;height:16px;
+  margin-right:4px;vertical-align:middle;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%238b949e'%3E%3Cpath d='M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h8.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v8.086A1.75 1.75 0 0112.25 15h-8.5A1.75 1.75 0 012 13.25V1.75z'/%3E%3C/svg%3E") no-repeat center/14px}
+
+/* ── Responsive ────────────────────────────────────────────────── */
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0);box-shadow:4px 0 20px rgba(0,0,0,.4)}
+  .main{margin-left:0;padding:20px 16px 60px}
+  .hamburger{display:block}
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:85}
+  .overlay.show{display:block}
+  .card-grid{grid-template-columns:1fr}
+}
+@media(max-width:480px){
+  .search-box{max-width:180px}
+  .header .logo .full-name{display:none}
+}
+
+/* ── Misc ──────────────────────────────────────────────────────── */
+.muted{color:var(--fg2)}
+.bold{font-weight:600}
+.mt-1{margin-top:8px}.mt-2{margin-top:16px}
+.mb-1{margin-bottom:8px}.mb-2{margin-bottom:16px}
+.hidden{display:none!important}
+::selection{background:var(--accent);color:#fff}
+.scroll-top{position:fixed;bottom:24px;right:24px;width:40px;height:40px;
+  border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;
+  font-size:1.2rem;display:none;align-items:center;justify-content:center;
+  box-shadow:0 2px 8px rgba(0,0,0,.3);z-index:50;transition:opacity var(--transition)}
+.scroll-top.show{display:flex}
+.key-file{font-size:.8rem;color:var(--fg2);font-family:"SF Mono",Monaco,Consolas,monospace}
+.key-file::before{content:"";display:inline-block;width:12px;height:12px;margin-right:4px;
+  vertical-align:middle;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%238b949e'%3E%3Cpath d='M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h8.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v8.086A1.75 1.75 0 0112.25 15h-8.5A1.75 1.75 0 012 13.25V1.75z'/%3E%3C/svg%3E") no-repeat center/12px}
+.location-tag{display:inline-block;padding:1px 8px;border-radius:4px;font-size:.72rem;
+  font-family:monospace;background:var(--accent-dim);color:var(--accent);margin-left:6px}
+</style>
+</head>
+<body>
+
+<!-- ── Header ────────────────────────────────────────────────── -->
+<header class="header">
+  <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">&#9776;</button>
+  <div class="logo">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8" stroke="var(--accent)"/></svg>
+    <span>Open<span class="full-name">Claw</span></span>
+    <span style="font-weight:400;font-size:.8rem;color:var(--fg2)">Architecture</span>
+  </div>
+  <div class="search-box">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M11.5 7a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zm-.82 4.74a6 6 0 111.06-1.06l3.04 3.04a.75.75 0 11-1.06 1.06l-3.04-3.04z"/></svg>
+    <input type="text" id="searchInput" placeholder="Search sections..." oninput="handleSearch(this.value)">
+  </div>
+  <div class="header-actions">
+    <button class="theme-toggle" onclick="toggleTheme()">
+      <span id="themeIcon">&#9789;</span> <span id="themeLabel">Light</span>
+    </button>
+  </div>
+</header>
+
+<!-- ── Sidebar ───────────────────────────────────────────────── -->
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+<nav class="sidebar" id="sidebar">
+  <div class="nav-section">
+    <div class="nav-section-title" onclick="toggleNavSection(this)">Overview <span class="chevron">&#9660;</span></div>
+    <ul class="nav-links">
+      <li><a href="#overview">What Is OpenClaw?</a></li>
+      <li><a href="#diagram">Architecture Diagram</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-title" onclick="toggleNavSection(this)">Core <span class="chevron">&#9660;</span></div>
+    <ul class="nav-links">
+      <li><a href="#gateway">Gateway Server</a></li>
+      <li><a href="#routing">Message Routing</a></li>
+      <li><a href="#channels">Channels</a></li>
+      <li><a href="#agent-runtime">Agent Runtime</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-title" onclick="toggleNavSection(this)">Tools <span class="chevron">&#9660;</span></div>
+    <ul class="nav-links">
+      <li><a href="#tools">Tools Overview</a></li>
+      <li><a href="#tool-browser">Browser Control</a></li>
+      <li><a href="#tool-canvas">Canvas</a></li>
+      <li><a href="#tool-nodes">Nodes</a></li>
+      <li><a href="#tool-process">Process Exec</a></li>
+      <li><a href="#tool-cron">Cron &amp; Automation</a></li>
+      <li><a href="#tool-memory">Memory</a></li>
+      <li><a href="#tool-sessions">Session Tools</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-title" onclick="toggleNavSection(this)">Clients <span class="chevron">&#9660;</span></div>
+    <ul class="nav-links">
+      <li><a href="#cli">CLI</a></li>
+      <li><a href="#control-ui">Control UI</a></li>
+      <li><a href="#companion-apps">Companion Apps</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-title" onclick="toggleNavSection(this)">Ecosystem <span class="chevron">&#9660;</span></div>
+    <ul class="nav-links">
+      <li><a href="#extensions">Extensions</a></li>
+      <li><a href="#skills">Skills</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-title" onclick="toggleNavSection(this)">System <span class="chevron">&#9660;</span></div>
+    <ul class="nav-links">
+      <li><a href="#configuration">Configuration</a></li>
+      <li><a href="#security">Security Model</a></li>
+      <li><a href="#infrastructure">Infrastructure</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-title" onclick="toggleNavSection(this)">Reference <span class="chevron">&#9660;</span></div>
+    <ul class="nav-links">
+      <li><a href="#data-flow">Data Flow</a></li>
+      <li><a href="#directory">Directory Structure</a></li>
+      <li><a href="#tech-stack">Tech Stack</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ── Main Content ──────────────────────────────────────────── -->
+<main class="main" id="mainContent">
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- OVERVIEW                                                    -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="section" id="overview">
+  <h2><span class="sec-icon">&#128640;</span> What Is OpenClaw?</h2>
+  <p>OpenClaw is a <strong>personal AI assistant</strong> you self-host on your own devices. It acts as a single control plane that connects to the messaging apps you already use &mdash; WhatsApp, Telegram, Slack, Discord, Google Chat, Signal, iMessage, Microsoft Teams, Matrix, and more &mdash; and routes every inbound message through an AI agent (backed by Claude, GPT, Gemini, or other LLMs).</p>
+  <p class="mt-1">It can also speak and listen (voice wake + talk mode), render a live visual canvas, automate browser tasks, run cron jobs, and coordinate across multiple agent sessions.</p>
+  <p class="mt-1 muted">Think of it as: <strong>one AI brain &harr; every chat surface you use</strong>, running locally.</p>
+  <div class="tags mt-2">
+    <span class="tag blue">Self-hosted</span>
+    <span class="tag green">Multi-channel</span>
+    <span class="tag yellow">Multi-LLM</span>
+    <span class="tag blue">Voice</span>
+    <span class="tag green">Browser Automation</span>
+    <span class="tag yellow">Extensible</span>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- INTERACTIVE ARCHITECTURE DIAGRAM                            -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="section" id="diagram">
+  <h2><span class="sec-icon">&#128506;</span> Architecture Diagram</h2>
+  <p class="muted mb-1">Click any component to jump to its documentation.</p>
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 820 580" width="820" height="580" xmlns="http://www.w3.org/2000/svg" style="min-width:700px">
+      <!-- Channels row -->
+      <rect x="40" y="10" width="740" height="54" rx="8" fill="none" stroke="var(--border)" stroke-dasharray="4"/>
+      <text x="410" y="28" text-anchor="middle" class="sublabel" style="fill:var(--fg3)">INBOUND CHANNELS</text>
+      <g class="node" onclick="loc('#channels')"><rect class="node-bg" x="60" y="32" width="72" height="26" rx="5" fill="var(--svg-node)"/><text x="96" y="49" text-anchor="middle" style="font-size:10px">WhatsApp</text></g>
+      <g class="node" onclick="loc('#channels')"><rect class="node-bg" x="142" y="32" width="72" height="26" rx="5" fill="var(--svg-node)"/><text x="178" y="49" text-anchor="middle" style="font-size:10px">Telegram</text></g>
+      <g class="node" onclick="loc('#channels')"><rect class="node-bg" x="224" y="32" width="56" height="26" rx="5" fill="var(--svg-node)"/><text x="252" y="49" text-anchor="middle" style="font-size:10px">Slack</text></g>
+      <g class="node" onclick="loc('#channels')"><rect class="node-bg" x="290" y="32" width="64" height="26" rx="5" fill="var(--svg-node)"/><text x="322" y="49" text-anchor="middle" style="font-size:10px">Discord</text></g>
+      <g class="node" onclick="loc('#channels')"><rect class="node-bg" x="364" y="32" width="56" height="26" rx="5" fill="var(--svg-node)"/><text x="392" y="49" text-anchor="middle" style="font-size:10px">Signal</text></g>
+      <g class="node" onclick="loc('#channels')"><rect class="node-bg" x="430" y="32" width="70" height="26" rx="5" fill="var(--svg-node)"/><text x="465" y="49" text-anchor="middle" style="font-size:10px">iMessage</text></g>
+      <g class="node" onclick="loc('#channels')"><rect class="node-bg" x="510" y="32" width="56" height="26" rx="5" fill="var(--svg-node)"/><text x="538" y="49" text-anchor="middle" style="font-size:10px">Teams</text></g>
+      <g class="node" onclick="loc('#channels')"><rect class="node-bg" x="576" y="32" width="56" height="26" rx="5" fill="var(--svg-node)"/><text x="604" y="49" text-anchor="middle" style="font-size:10px">Matrix</text></g>
+      <g class="node" onclick="loc('#channels')"><rect class="node-bg" x="642" y="32" width="56" height="26" rx="5" fill="var(--svg-node)"/><text x="670" y="49" text-anchor="middle" style="font-size:10px">LINE</text></g>
+      <g class="node" onclick="loc('#channels')"><rect class="node-bg" x="708" y="32" width="56" height="26" rx="5" fill="var(--svg-node)"/><text x="736" y="49" text-anchor="middle" style="font-size:10px">+more</text></g>
+
+      <!-- Arrow down -->
+      <line x1="410" y1="64" x2="410" y2="90" stroke="var(--svg-line)" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+      <!-- Gateway box -->
+      <rect x="120" y="90" width="580" height="260" rx="10" fill="none" stroke="var(--border)" stroke-width="1.5"/>
+      <text x="410" y="110" text-anchor="middle" class="sublabel" style="fill:var(--fg3)">GATEWAY CONTROL PLANE</text>
+
+      <!-- Gateway Server center -->
+      <g class="node" onclick="loc('#gateway')"><rect class="node-bg" x="310" y="118" width="200" height="36" rx="7" fill="var(--svg-node)"/><text x="410" y="140" text-anchor="middle" style="font-size:12px;font-weight:600">Gateway Server</text></g>
+      <text x="410" y="165" text-anchor="middle" class="sublabel" style="fill:var(--fg3)">ws://127.0.0.1:18789</text>
+
+      <!-- Sub-components row -->
+      <g class="node" onclick="loc('#routing')"><rect class="node-bg" x="140" y="180" width="96" height="32" rx="6" fill="var(--svg-node)"/><text x="188" y="200" text-anchor="middle" style="font-size:10px">Router</text></g>
+      <g class="node" onclick="loc('#agent-runtime')"><rect class="node-bg" x="254" y="180" width="96" height="32" rx="6" fill="var(--svg-node)"/><text x="302" y="200" text-anchor="middle" style="font-size:10px">Sessions</text></g>
+      <g class="node" onclick="loc('#agent-runtime')"><rect class="node-bg" x="368" y="180" width="96" height="32" rx="6" fill="var(--svg-node)"/><text x="416" y="200" text-anchor="middle" style="font-size:10px">Agent Runtime</text></g>
+      <g class="node" onclick="loc('#tools')"><rect class="node-bg" x="482" y="180" width="96" height="32" rx="6" fill="var(--svg-node)"/><text x="530" y="200" text-anchor="middle" style="font-size:10px">Tools Registry</text></g>
+      <g class="node" onclick="loc('#tool-cron')"><rect class="node-bg" x="596" y="180" width="86" height="32" rx="6" fill="var(--svg-node)"/><text x="639" y="200" text-anchor="middle" style="font-size:10px">Cron</text></g>
+
+      <!-- Lines from gateway to sub-components -->
+      <line x1="340" y1="154" x2="188" y2="180" stroke="var(--svg-line)" stroke-width="1.2"/>
+      <line x1="370" y1="154" x2="302" y2="180" stroke="var(--svg-line)" stroke-width="1.2"/>
+      <line x1="410" y1="154" x2="416" y2="180" stroke="var(--svg-line)" stroke-width="1.2"/>
+      <line x1="450" y1="154" x2="530" y2="180" stroke="var(--svg-line)" stroke-width="1.2"/>
+      <line x1="480" y1="154" x2="639" y2="180" stroke="var(--svg-line)" stroke-width="1.2"/>
+
+      <!-- Second row inside gateway -->
+      <g class="node" onclick="loc('#routing')"><rect class="node-bg" x="145" y="230" width="105" height="30" rx="6" fill="var(--svg-node)" opacity=".75"/><text x="198" y="249" text-anchor="middle" style="font-size:9px">Bindings Resolver</text></g>
+      <g class="node" onclick="loc('#agent-runtime')"><rect class="node-bg" x="280" y="230" width="105" height="30" rx="6" fill="var(--svg-node)" opacity=".75"/><text x="332" y="249" text-anchor="middle" style="font-size:9px">Pi Agent (RPC)</text></g>
+      <g class="node" onclick="loc('#tool-browser')"><rect class="node-bg" x="415" y="230" width="105" height="30" rx="6" fill="var(--svg-node)" opacity=".75"/><text x="468" y="249" text-anchor="middle" style="font-size:9px">Browser Control</text></g>
+      <g class="node" onclick="loc('#tool-cron')"><rect class="node-bg" x="550" y="230" width="105" height="30" rx="6" fill="var(--svg-node)" opacity=".75"/><text x="602" y="249" text-anchor="middle" style="font-size:9px">Webhooks &amp; Gmail</text></g>
+
+      <!-- Lines to second row -->
+      <line x1="188" y1="212" x2="198" y2="230" stroke="var(--svg-line)" stroke-width="1"/>
+      <line x1="302" y1="212" x2="332" y2="230" stroke="var(--svg-line)" stroke-width="1"/>
+      <line x1="530" y1="212" x2="468" y2="230" stroke="var(--svg-line)" stroke-width="1"/>
+      <line x1="639" y1="212" x2="602" y2="230" stroke="var(--svg-line)" stroke-width="1"/>
+
+      <!-- Text label for gateway box bottom -->
+      <text x="410" y="328" text-anchor="middle" class="sublabel" style="fill:var(--fg3);font-weight:600">GATEWAY CONTROL PLANE</text>
+
+      <!-- Arrows out of gateway -->
+      <line x1="220" y1="350" x2="220" y2="390" stroke="var(--svg-line)" stroke-width="2" marker-end="url(#arrowhead)"/>
+      <line x1="410" y1="350" x2="410" y2="390" stroke="var(--svg-line)" stroke-width="2" marker-end="url(#arrowhead)"/>
+      <line x1="620" y1="350" x2="620" y2="390" stroke="var(--svg-line)" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+      <!-- Bottom row: CLI, Control UI, Companion Apps -->
+      <g class="node" onclick="loc('#cli')"><rect class="node-bg" x="145" y="395" width="150" height="40" rx="8" fill="var(--svg-node)"/><text x="220" y="413" text-anchor="middle" style="font-size:11px;font-weight:600">CLI Client</text><text x="220" y="426" text-anchor="middle" style="font-size:8px;fill:rgba(255,255,255,.7)">openclaw ...</text></g>
+      <g class="node" onclick="loc('#control-ui')"><rect class="node-bg" x="330" y="395" width="160" height="40" rx="8" fill="var(--svg-node)"/><text x="410" y="413" text-anchor="middle" style="font-size:11px;font-weight:600">Control UI</text><text x="410" y="426" text-anchor="middle" style="font-size:8px;fill:rgba(255,255,255,.7)">WebChat + Dashboard</text></g>
+      <g class="node" onclick="loc('#companion-apps')"><rect class="node-bg" x="525" y="395" width="190" height="40" rx="8" fill="var(--svg-node)"/><text x="620" y="413" text-anchor="middle" style="font-size:11px;font-weight:600">Companion Apps</text><text x="620" y="426" text-anchor="middle" style="font-size:8px;fill:rgba(255,255,255,.7)">macOS &middot; iOS &middot; Android</text></g>
+
+      <!-- Device Nodes -->
+      <line x1="620" y1="435" x2="620" y2="470" stroke="var(--svg-line)" stroke-width="2" marker-end="url(#arrowhead)"/>
+      <g class="node" onclick="loc('#tool-nodes')"><rect class="node-bg" x="510" y="475" width="220" height="54" rx="8" fill="var(--svg-node)" opacity=".8"/><text x="620" y="496" text-anchor="middle" style="font-size:10px;font-weight:600">Device Nodes</text><text x="620" y="512" text-anchor="middle" style="font-size:8px;fill:rgba(255,255,255,.65)">Camera &middot; Screen Rec &middot; Location</text><text x="620" y="524" text-anchor="middle" style="font-size:8px;fill:rgba(255,255,255,.65)">Canvas &middot; Voice Wake &middot; Talk</text></g>
+
+      <!-- Arrow marker -->
+      <defs><marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="var(--svg-line)"/></marker></defs>
+    </svg>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- GATEWAY SERVER                                              -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="section" id="gateway">
+  <h2><span class="sec-icon">&#9881;</span> Gateway Server <span class="location-tag">src/gateway/</span></h2>
+  <p>The Gateway is a <strong>WebSocket + HTTP server</strong> (default port <code>18789</code>) that acts as the single control plane for everything. Every client &mdash; CLI, web UI, macOS/iOS/Android apps, channel adapters &mdash; connects to the gateway over WebSocket.</p>
+
+  <h3>Responsibilities</h3>
+  <ul>
+    <li>Accepts WebSocket connections from all clients and channels</li>
+    <li>Routes inbound messages to the correct agent session</li>
+    <li>Manages <strong>80+ RPC methods</strong> (health, chat, config, cron, nodes, sessions, etc.)</li>
+    <li>Hosts the Control UI and WebChat directly</li>
+    <li>Broadcasts real-time events (presence, typing, status) to all connected clients</li>
+    <li>Handles authentication (token, password, Tailscale identity headers)</li>
+    <li>Runs a heartbeat system for health monitoring</li>
+    <li>Manages device pairing and node registration</li>
+  </ul>
+
+  <h3>Key Files</h3>
+  <ul>
+    <li class="key-file">src/gateway/server.impl.ts &mdash; Main server startup</li>
+    <li class="key-file">src/gateway/server-ws-runtime.ts &mdash; WebSocket connection handling</li>
+    <li class="key-file">src/gateway/server-methods.ts &mdash; RPC method registry</li>
+    <li class="key-file">src/gateway/server-channels.ts &mdash; Channel lifecycle management</li>
+    <li class="key-file">src/gateway/server-cron.ts &mdash; Cron service</li>
+    <li class="key-file">src/gateway/node-registry.ts &mdash; Connected device node tracking</li>
+  </ul>
+
+  <h3>Startup Flow</h3>
+  <pre><code>Load config &rarr; Validate/migrate &rarr; Init plugins &rarr; Start WS server &rarr;
+Connect channels &rarr; Launch Canvas host &rarr; Start Bonjour discovery &rarr;
+Begin heartbeat loop</code></pre>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- MESSAGE ROUTING                                             -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="section" id="routing">
+  <h2><span class="sec-icon">&#128268;</span> Message Routing <span class="location-tag">src/routing/</span></h2>
+  <p>The router determines which agent handles each inbound message based on configurable bindings. This enables <strong>multi-agent setups</strong> where different agents handle different channels, servers, or even specific users.</p>
+
+  <h3>Resolution Priority (highest &rarr; lowest)</h3>
+  <pre><code>1. Peer binding       (specific user DM)
+2. Peer parent        (thread inheritance)
+3. Guild + Roles      (Discord server + role combo)
+4. Guild              (Discord server-wide)
+5. Team               (Teams workspace)
+6. Account            (specific bot account)
+7. Channel            (channel-wide default)
+8. Default agent      (fallback)</code></pre>
+
+  <p class="mt-1"><strong>Session key format:</strong> <code>{agentId}:main</code> or scoped per-peer/per-channel.</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- CHANNELS                                                    -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="section" id="channels">
+  <h2><span class="sec-icon">&#128172;</span> Channels <span class="location-tag">src/telegram/ src/discord/ src/slack/ ...</span></h2>
+  <p>Each channel adapter is responsible for connecting to the messaging platform's API, receiving inbound messages and normalizing them, sending outbound replies, managing authentication/webhooks/reconnection, and handling platform-specific features.</p>
+
+  <h3>Built-in Channels</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Channel</th><th>Library / Protocol</th><th>Key Feature</th></tr></thead>
+      <tbody>
+        <tr><td>WhatsApp</td><td>Baileys (Web)</td><td>QR code pairing, media handling</td></tr>
+        <tr><td>Telegram</td><td>grammY</td><td>Bot API, native commands, webhooks</td></tr>
+        <tr><td>Slack</td><td>Bolt</td><td>Socket Mode, thread support</td></tr>
+        <tr><td>Discord</td><td>discord.js</td><td>Guilds, roles, slash commands</td></tr>
+        <tr><td>Signal</td><td>signal-cli</td><td>Encrypted messaging</td></tr>
+        <tr><td>iMessage</td><td>imsg (legacy)</td><td>macOS Messages.app integration</td></tr>
+        <tr><td>LINE</td><td>LINE Messaging API</td><td>Rich menus, flex messages</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Extension Channels</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Channel</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Microsoft Teams</td><td>Bot Framework</td></tr>
+        <tr><td>Google Chat</td><td>Chat API + webhooks</td></tr>
+        <tr><td>BlueBubbles</td><td>iMessage via REST (recommended)</td></tr>
+        <tr><td>Matrix</td><td>Federated, E2EE</td></tr>
+        <tr><td>Zalo / Zalo Personal</td><td>Vietnam-focused</td></tr>
+        <tr><td>Feishu/Lark</td><td>Enterprise + docs/wiki/drive</td></tr>
+        <tr><td>Mattermost</td><td>Self-hosted</td></tr>
+        <tr><td>Nostr</td><td>Decentralized, NIP-04 DMs</td></tr>
+        <tr><td>Nextcloud Talk</td><td>Self-hosted</td></tr>
+        <tr><td>IRC</td><td>Classic IRC protocol</td></tr>
+        <tr><td>Twitch</td><td>Stream chat</td></tr>
+        <tr><td>Tlon/Urbit</td><td>Decentralized</td></tr>
+        <tr><td>Voice Call</td><td>Twilio/Telnyx + ElevenLabs</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="mt-1"><strong>Channel dock</strong> (<code>src/channels/dock.ts</code>): Central registry that manages channel lifecycle &mdash; connect, disconnect, status, probe. All channels register here.</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- AGENT RUNTIME                                               -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="section" id="agent-runtime">
+  <h2><span class="sec-icon">&#129302;</span> Agent Runtime <span class="location-tag">src/agents/ src/auto-reply/</span></h2>
+  <p>The agent runtime manages the AI conversation loop:</p>
+  <ol>
+    <li><strong>Receive</strong> normalized message from a channel</li>
+    <li><strong>Resolve</strong> which agent + session to use (via routing)</li>
+    <li><strong>Build</strong> the prompt (system prompt + workspace files + skills + conversation history)</li>
+    <li><strong>Call</strong> the LLM (Claude, GPT, Gemini, etc.) via RPC with tool streaming</li>
+    <li><strong>Execute</strong> any tool calls the LLM requests (browser, bash, file ops, etc.)</li>
+    <li><strong>Deliver</strong> the response back through the originating channel</li>
+  </ol>
+
+  <h3>Prompt Injection Sources</h3>
+  <ul>
+    <li><code>AGENTS.md</code> &mdash; Repository/workspace guidelines</li>
+    <li><code>SOUL.md</code> &mdash; Personality and behavior</li>
+    <li><code>TOOLS.md</code> &mdash; Tool usage instructions</li>
+    <li><strong>Skills</strong> &mdash; Dynamic skill files loaded per-session</li>
+  </ul>
+
+  <h3>Key Subsystems</h3>
+  <div class="card-grid">
+    <div class="card">
+      <h4>Auto-reply</h4>
+      <p>Orchestrates the reply flow &mdash; typing indicators, queue management, directive extraction (<code>/think</code>, <code>/verbose</code>, <code>/elevated</code>), streaming delivery, broadcast to group channels.</p>
+    </div>
+    <div class="card">
+      <h4>Session Model</h4>
+      <p>Manages conversation persistence, pruning, model overrides, and send policies.</p>
+    </div>
+    <div class="card">
+      <h4>Media Understanding</h4>
+      <p>Vision (image analysis), audio transcription (Deepgram), video frame extraction.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- TOOLS                                                       -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="section" id="tools">
+  <h2><span class="sec-icon">&#128295;</span> Tools</h2>
+  <p>The agent has access to a rich set of tools it can invoke during conversations.</p>
+</div>
+
+<div class="section" id="tool-browser">
+  <h3>Browser Control <span class="location-tag">src/browser/</span></h3>
+  <ul>
+    <li>Full <strong>Playwright-based</strong> browser automation</li>
+    <li>Dedicated OpenClaw Chrome/Chromium profile</li>
+    <li>CDP (Chrome DevTools Protocol) integration</li>
+    <li>Actions: navigate, click, type, screenshot, observe DOM, upload files</li>
+  </ul>
+</div>
+
+<div class="section" id="tool-canvas">
+  <h3>Canvas <span class="location-tag">src/canvas-host/</span></h3>
+  <ul>
+    <li>Agent-driven visual workspace</li>
+    <li><strong>A2UI</strong> (Agent-to-UI): push HTML/JS to a live canvas surface</li>
+    <li>Snapshot, eval, reset commands</li>
+    <li>Rendered on macOS app, iOS, Android, or WebChat</li>
+  </ul>
+</div>
+
+<div class="section" id="tool-nodes">
+  <h3>Nodes <span class="location-tag">src/node-host/</span></h3>
+  <ul>
+    <li>Remote device command execution via <code>node.invoke</code></li>
+    <li>Camera snap/clip, screen recording, location, notifications</li>
+    <li>macOS: <code>system.run</code>, <code>system.notify</code></li>
+  </ul>
+</div>
+
+<div class="section" id="tool-process">
+  <h3>Process Execution <span class="location-tag">src/process/</span></h3>
+  <ul>
+    <li>Shell command execution with command queue</li>
+    <li>Process lanes for concurrency control</li>
+    <li>Sandbox support (Docker isolation for non-main sessions)</li>
+  </ul>
+</div>
+
+<div class="section" id="tool-cron">
+  <h3>Cron &amp; Automation <span class="location-tag">src/cron/</span></h3>
+  <ul>
+    <li>Scheduled tasks with cron expressions</li>
+    <li>Isolated agent execution per job</li>
+    <li>Webhooks (<code>src/hooks/</code>) and Gmail Pub/Sub integration</li>
+  </ul>
+</div>
+
+<div class="section" id="tool-memory">
+  <h3>Memory <span class="location-tag">src/memory/ extensions/memory-*</span></h3>
+  <ul>
+    <li>Vector database with <strong>SQLite</strong> storage</li>
+    <li>Embedding providers: OpenAI, Gemini, Voyage</li>
+    <li>Hybrid search (semantic + keyword)</li>
+    <li>LanceDB extension for long-term memory with auto-recall</li>
+  </ul>
+</div>
+
+<div class="section" id="tool-sessions">
+  <h3>Session Tools</h3>
+  <ul>
+    <li><code>sessions_list</code> &mdash; Discover active sessions</li>
+    <li><code>sessions_history</code> &mdash; Fetch transcripts</li>
+    <li><code>sessions_send</code> &mdash; Cross-session messaging (agent-to-agent)</li>
+  </ul>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- CLI                                                         -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="section" id="cli">
+  <h2><span class="sec-icon">&#9000;</span> CLI <span class="location-tag">src/cli/</span></h2>
+  <p>The CLI is built with <strong>Commander.js</strong> and provides <strong>50+ commands</strong>:</p>
+  <pre><code>openclaw onboard          # Interactive setup wizard
+openclaw gateway          # Start/stop the gateway server
+openclaw agent            # Run a single agent turn
+openclaw message send     # Send a message via any channel
+openclaw status           # System status overview
+openclaw health           # Gateway health check
+openclaw doctor           # Diagnose and fix issues
+openclaw config           # View/edit configuration
+openclaw sessions         # List/manage sessions
+openclaw channels         # Channel management + login
+openclaw pairing          # Approve/reject DM pairing codes
+openclaw nodes            # Remote node control
+openclaw devices          # Device pairing + tokens
+openclaw cron             # Cron job management
+openclaw browser          # Browser automation control
+openclaw memory           # Memory/knowledge indexing
+openclaw plugins          # Plugin management
+openclaw hooks            # Hook management
+openclaw logs             # Real-time log streaming
+openclaw tui              # Terminal UI (interactive)
+openclaw models           # Model configuration
+openclaw update           # Update to latest version
+openclaw dashboard        # Open the Control UI in browser</code></pre>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- CONTROL UI                                                  -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="section" id="control-ui">
+  <h2><span class="sec-icon">&#128421;</span> Control UI <span class="location-tag">ui/</span></h2>
+  <p>A single-page web application served directly from the gateway.</p>
+  <p><strong>Tech stack:</strong> Lit (web components) + Vite + TypeScript</p>
+
+  <h3>Views</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>View</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>Overview</td><td>Dashboard with system health</td></tr>
+        <tr><td>Chat</td><td>WebChat interface (full conversation)</td></tr>
+        <tr><td>Channels</td><td>Channel status + configuration forms</td></tr>
+        <tr><td>Sessions</td><td>Active session list + management</td></tr>
+        <tr><td>Agents</td><td>Agent configuration + file editing</td></tr>
+        <tr><td>Skills</td><td>Skill browser + install/update</td></tr>
+        <tr><td>Cron</td><td>Scheduled job management</td></tr>
+        <tr><td>Nodes</td><td>Connected device nodes</td></tr>
+        <tr><td>Config</td><td>Full JSON config editor</td></tr>
+        <tr><td>Usage</td><td>Cost/token analytics + charts</td></tr>
+        <tr><td>Logs</td><td>Real-time log viewer</td></tr>
+        <tr><td>Debug</td><td>Debug tools</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- COMPANION APPS                                              -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="section" id="companion-apps">
+  <h2><span class="sec-icon">&#128241;</span> Companion Apps</h2>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>macOS App</h4>
+      <p><strong>Swift (SwiftUI)</strong><br>
+      Menu bar control for the gateway. Voice Wake (always-on keyword detection) + push-to-talk. Talk Mode overlay (continuous conversation). WebChat + debug tools. Gateway discovery (Bonjour). Remote gateway control over SSH/Tailscale.</p>
+      <div class="tags mt-1"><span class="tag">apps/macos/</span></div>
+    </div>
+    <div class="card">
+      <h4>iOS App</h4>
+      <p><strong>Swift (SwiftUI) &mdash; iOS 18+</strong><br>
+      Canvas surface (A2UI rendering). Voice Wake + Talk Mode. Camera snap/clip, screen recording. Location, contacts, calendar, reminders. Bonjour gateway pairing.</p>
+      <div class="tags mt-1"><span class="tag">apps/ios/</span></div>
+    </div>
+    <div class="card">
+      <h4>Android App</h4>
+      <p><strong>Kotlin (Jetpack Compose) &mdash; API 31+</strong><br>
+      Canvas surface. Talk Mode with orb overlay. Camera, screen capture. Location, SMS. Gateway connection via WebSocket.</p>
+      <div class="tags mt-1"><span class="tag">apps/android/</span></div>
+    </div>
+    <div class="card">
+      <h4>Shared Library</h4>
+      <p><strong>Swift &mdash; OpenClawKit</strong><br>
+      <code>OpenClawProtocol</code> &mdash; Gateway WebSocket protocol models.<br>
+      <code>OpenClawKit</code> &mdash; Device commands, capabilities, auth, discovery.<br>
+      <code>OpenClawChatUI</code> &mdash; Reusable chat interface components.</p>
+      <div class="tags mt-1"><span class="tag">apps/shared/OpenClawKit/</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- EXTENSIONS                                                  -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="section" id="extensions">
+  <h2><span class="sec-icon">&#129513;</span> Extensions <span class="location-tag">extensions/</span></h2>
+  <p>Extensions are workspace packages that plug into the gateway via the Plugin SDK. <strong>37 extensions</strong> organized by category:</p>
+
+  <h3>Messaging Channels (22)</h3>
+  <div class="tags">
+    <span class="tag blue">Discord</span><span class="tag blue">Slack</span><span class="tag blue">Telegram</span>
+    <span class="tag blue">WhatsApp</span><span class="tag blue">Signal</span><span class="tag blue">iMessage</span>
+    <span class="tag blue">Zalo</span><span class="tag blue">Zalo Personal</span><span class="tag blue">LINE</span>
+    <span class="tag blue">Feishu/Lark</span><span class="tag blue">MS Teams</span><span class="tag blue">Google Chat</span>
+    <span class="tag blue">Mattermost</span><span class="tag blue">Matrix</span><span class="tag blue">Nextcloud Talk</span>
+    <span class="tag blue">IRC</span><span class="tag blue">Nostr</span><span class="tag blue">Tlon/Urbit</span>
+    <span class="tag blue">BlueBubbles</span><span class="tag blue">Twitch</span><span class="tag blue">Voice Call</span>
+    <span class="tag blue">WebChat</span>
+  </div>
+
+  <h3>Memory &amp; Cognitive (2)</h3>
+  <ul>
+    <li><code>memory-core</code> &mdash; File-backed memory search</li>
+    <li><code>memory-lancedb</code> &mdash; Vector search with auto-recall/capture</li>
+  </ul>
+
+  <h3>Device &amp; Control (3)</h3>
+  <ul>
+    <li><code>device-pair</code> &mdash; WebSocket-based device pairing</li>
+    <li><code>phone-control</code> &mdash; iOS/Android commands with permission groups</li>
+    <li><code>voice-call</code> &mdash; Twilio/Telnyx voice with ElevenLabs</li>
+  </ul>
+
+  <h3>Auth Providers (4)</h3>
+  <ul>
+    <li><code>google-antigravity-auth</code> &mdash; Google Cloud Code Assist OAuth</li>
+    <li><code>google-gemini-cli-auth</code> &mdash; Gemini CLI OAuth</li>
+    <li><code>qwen-portal-auth</code> &mdash; Alibaba Qwen OAuth</li>
+    <li><code>minimax-portal-auth</code> &mdash; MiniMax AI OAuth</li>
+  </ul>
+
+  <h3>Productivity (2)</h3>
+  <ul>
+    <li><code>lobster</code> &mdash; Typed workflow pipelines with approval steps</li>
+    <li><code>open-prose</code> &mdash; OpenProse VM skill pack</li>
+  </ul>
+
+  <h3>AI Tasks (2)</h3>
+  <ul>
+    <li><code>llm-task</code> &mdash; Structured JSON LLM tasks</li>
+    <li><code>copilot-proxy</code> &mdash; GitHub Copilot proxy provider</li>
+  </ul>
+
+  <h3>Diagnostics (1)</h3>
+  <ul>
+    <li><code>diagnostics-otel</code> &mdash; OpenTelemetry export (logs, metrics, traces)</li>
+  </ul>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- SKILLS                                                      -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="section" id="skills">
+  <h2><span class="sec-icon">&#127919;</span> Skills <span class="location-tag">skills/</span></h2>
+  <p>Skills are self-contained capability packs the agent can use. <strong>51 bundled skills</strong>:</p>
+
+  <h4>Communication</h4>
+  <div class="tags"><span class="tag">discord</span><span class="tag">slack</span><span class="tag">bluebubbles</span><span class="tag">imsg</span><span class="tag">telegram</span><span class="tag">whatsapp</span><span class="tag">signal</span><span class="tag">voice-call</span><span class="tag">google-chat</span></div>
+
+  <h4>Notes &amp; Docs</h4>
+  <div class="tags"><span class="tag">apple-notes</span><span class="tag">bear-notes</span><span class="tag">obsidian</span><span class="tag">notion</span><span class="tag">clawhub</span></div>
+
+  <h4>Audio &amp; Voice</h4>
+  <div class="tags"><span class="tag">sherpa-onnx-tts</span><span class="tag">openai-whisper</span><span class="tag">openai-whisper-api</span><span class="tag">sonoscli</span><span class="tag">spotify-player</span></div>
+
+  <h4>Image &amp; Media</h4>
+  <div class="tags"><span class="tag">nano-banana-pro</span><span class="tag">openai-image-gen</span><span class="tag">video-frames</span><span class="tag">camsnap</span><span class="tag">gifgrep</span></div>
+
+  <h4>Dev &amp; CI/CD</h4>
+  <div class="tags"><span class="tag">github</span><span class="tag">coding-agent</span><span class="tag">tmux</span></div>
+
+  <h4>Productivity</h4>
+  <div class="tags"><span class="tag">trello</span><span class="tag">apple-reminders</span><span class="tag">things-mac</span></div>
+
+  <h4>System &amp; Utilities</h4>
+  <div class="tags"><span class="tag">1password</span><span class="tag">weather</span><span class="tag">himalaya</span><span class="tag">healthcheck</span><span class="tag">openhue</span><span class="tag">blucli</span><span class="tag">gemini</span><span class="tag">nano-pdf</span><span class="tag">+more</span></div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- CONFIGURATION                                               -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="section" id="configuration">
+  <h2><span class="sec-icon">&#9881;</span> Configuration <span class="location-tag">src/config/</span></h2>
+  <p>All config lives in <code>~/.openclaw/openclaw.json</code> (JSON5 supported).</p>
+
+  <h3>Key Config Sections</h3>
+  <pre><code>agent.model              — Default LLM model
+agent.workspace          — Workspace root path
+channels.*               — Per-channel tokens and settings
+bindings                 — Agent routing bindings
+gateway.port             — Server port (default: 18789)
+gateway.bind             — Bind mode (loopback/lan/tailnet)
+gateway.auth             — Auth mode (token/password/tailscale)
+gateway.tailscale        — Tailscale Serve/Funnel config
+agents.defaults.sandbox  — Sandbox mode for non-main sessions
+cron                     — Scheduled jobs
+hooks                    — Event hooks (Gmail, plugins, custom)</code></pre>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- SECURITY MODEL                                              -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="section" id="security">
+  <h2><span class="sec-icon">&#128274;</span> Security Model</h2>
+  <ul>
+    <li><strong>Default:</strong> Tools run on the host for the main session (full access for the owner)</li>
+    <li><strong>Group/channel safety:</strong> Non-main sessions can run in per-session Docker sandboxes</li>
+    <li><strong>DM pairing:</strong> Unknown senders must provide a pairing code before the bot responds</li>
+    <li><strong>Allowlists:</strong> Per-channel sender allowlists (<code>allowFrom</code>)</li>
+    <li><strong>Exec approvals:</strong> Sensitive tool calls require explicit approval</li>
+    <li><strong>SSRF protection:</strong> Outbound fetch requests are filtered against private IPs</li>
+    <li><strong>Rate limiting:</strong> Auth brute-force protection</li>
+    <li><strong>TLS:</strong> Optional HTTPS/WSS for remote access</li>
+  </ul>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- INFRASTRUCTURE                                              -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="section" id="infrastructure">
+  <h2><span class="sec-icon">&#128736;</span> Infrastructure &amp; Utilities <span class="location-tag">src/infra/</span></h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Module</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>Outbound messaging</td><td>Delivery orchestration, formatting, channel selection</td></tr>
+        <tr><td>Bonjour/mDNS</td><td>Local network gateway discovery</td></tr>
+        <tr><td>Heartbeat</td><td>Periodic health checks, wake triggers</td></tr>
+        <tr><td>Device auth</td><td>Token storage, rotation, revocation</td></tr>
+        <tr><td>Exec approvals</td><td>Code execution consent tracking</td></tr>
+        <tr><td>Gateway lock</td><td>Prevent duplicate gateway instances</td></tr>
+        <tr><td>SSRF guard</td><td>Prevent server-side request forgery</td></tr>
+        <tr><td>Backoff</td><td>Exponential retry logic</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Daemon Management <span class="location-tag">src/daemon/</span></h3>
+  <ul>
+    <li><strong>macOS:</strong> launchd user service</li>
+    <li><strong>Linux:</strong> systemd user service</li>
+    <li><strong>Windows:</strong> scheduled task</li>
+  </ul>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- DATA FLOW                                                   -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="section" id="data-flow">
+  <h2><span class="sec-icon">&#128260;</span> Data Flow: A Message's Journey</h2>
+  <p class="muted mb-1">Step through the lifecycle of a single message.</p>
+
+  <div class="flow-controls">
+    <button class="primary" onclick="flowAuto()">&#9654; Play</button>
+    <button onclick="flowPrev()">&#9664; Prev</button>
+    <button onclick="flowNext()">Next &#9654;</button>
+    <button onclick="flowReset()">Reset</button>
+  </div>
+
+  <div class="flow-steps" id="flowSteps">
+    <div class="flow-step" data-step="0">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-title">User sends message</div>
+        <div class="step-desc">User sends "What's the weather?" on WhatsApp</div>
+      </div>
+    </div>
+    <div class="flow-step" data-step="1">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-title">WhatsApp adapter receives</div>
+        <div class="step-desc"><code>src/web/</code> receives via Baileys WebSocket</div>
+      </div>
+    </div>
+    <div class="flow-step" data-step="2">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="step-title">Channel dock normalizes</div>
+        <div class="step-desc">Normalizes &rarr; <code>{ channel: "whatsapp", peer: "+1...", text: "..." }</code></div>
+      </div>
+    </div>
+    <div class="flow-step" data-step="3">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="step-title">Router resolves binding</div>
+        <div class="step-desc">Resolves binding &rarr; <code>agentId: "default"</code>, session: <code>"default:main"</code></div>
+      </div>
+    </div>
+    <div class="flow-step" data-step="4">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <div class="step-title">Auto-reply prepares context</div>
+        <div class="step-desc">Loads session history, workspace files, skills</div>
+      </div>
+    </div>
+    <div class="flow-step" data-step="5">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <div class="step-title">Agent runtime calls LLM</div>
+        <div class="step-desc">Calls LLM (Claude Opus) with full prompt + tool definitions</div>
+      </div>
+    </div>
+    <div class="flow-step" data-step="6">
+      <div class="step-num">7</div>
+      <div class="step-body">
+        <div class="step-title">LLM requests tool call</div>
+        <div class="step-desc">Tool call: <code>weather.get({ location: "current" })</code></div>
+      </div>
+    </div>
+    <div class="flow-step" data-step="7">
+      <div class="step-num">8</div>
+      <div class="step-body">
+        <div class="step-title">Tool executor runs skill</div>
+        <div class="step-desc">Runs the weather skill &rarr; "72&deg;F, sunny in San Francisco"</div>
+      </div>
+    </div>
+    <div class="flow-step" data-step="8">
+      <div class="step-num">9</div>
+      <div class="step-body">
+        <div class="step-title">LLM formats response</div>
+        <div class="step-desc">Final response: "It's 72&deg;F and sunny in San Francisco!"</div>
+      </div>
+    </div>
+    <div class="flow-step" data-step="9">
+      <div class="step-num">10</div>
+      <div class="step-body">
+        <div class="step-title">Outbound delivery</div>
+        <div class="step-desc">Delivers reply back through WhatsApp adapter</div>
+      </div>
+    </div>
+    <div class="flow-step" data-step="10">
+      <div class="step-num">11</div>
+      <div class="step-body">
+        <div class="step-title">User sees response</div>
+        <div class="step-desc">The response appears in their WhatsApp chat</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- DIRECTORY STRUCTURE                                         -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="section" id="directory">
+  <h2><span class="sec-icon">&#128193;</span> Directory Structure</h2>
+  <p class="muted mb-1">Click folders to expand/collapse.</p>
+
+  <div class="dir-tree">
+    <details open>
+      <summary>openclaw/</summary>
+
+      <details>
+        <summary>src/ <span style="color:var(--fg3);font-size:.7rem">&mdash; Core TypeScript source (52 modules)</span></summary>
+        <details><summary>gateway/</summary>
+          <div class="file">server.impl.ts</div>
+          <div class="file">server-ws-runtime.ts</div>
+          <div class="file">server-methods.ts</div>
+          <div class="file">server-channels.ts</div>
+          <div class="file">server-cron.ts</div>
+          <div class="file">node-registry.ts</div>
+        </details>
+        <details><summary>routing/</summary><div class="file">bindings-resolver.ts</div></details>
+        <details><summary>channels/</summary><div class="file">dock.ts</div></details>
+        <details><summary>agents/</summary><div class="file">agent-manager.ts</div></details>
+        <details><summary>auto-reply/</summary><div class="file">auto-reply.ts</div></details>
+        <details><summary>sessions/</summary><div class="file">session-manager.ts</div></details>
+        <details><summary>commands/</summary><div class="file">command-handler.ts</div></details>
+        <details><summary>cli/</summary><div class="file">index.ts</div></details>
+        <details><summary>config/</summary><div class="file">config-loader.ts</div></details>
+        <details><summary>browser/</summary><div class="file">browser-control.ts</div></details>
+        <details><summary>canvas-host/</summary><div class="file">canvas-host.ts</div></details>
+        <details><summary>process/</summary><div class="file">process-exec.ts</div></details>
+        <details><summary>cron/</summary><div class="file">cron-service.ts</div></details>
+        <details><summary>hooks/</summary><div class="file">hooks.ts</div></details>
+        <details><summary>memory/</summary><div class="file">memory.ts</div></details>
+        <details><summary>media/</summary><div class="file">media-server.ts</div></details>
+        <details><summary>media-understanding/</summary><div class="file">vision.ts</div></details>
+        <div class="file">discord/</div>
+        <div class="file">telegram/</div>
+        <div class="file">slack/</div>
+        <div class="file">web/ <span style="color:var(--fg3)">(WhatsApp)</span></div>
+        <div class="file">signal/</div>
+        <div class="file">imessage/</div>
+        <div class="file">line/</div>
+        <details><summary>infra/</summary><div class="file">bonjour.ts</div><div class="file">heartbeat.ts</div><div class="file">ssrf-guard.ts</div></details>
+        <div class="file">security/</div>
+        <div class="file">daemon/</div>
+        <div class="file">logging/</div>
+        <div class="file">terminal/</div>
+        <div class="file">tui/</div>
+        <div class="file">tts/</div>
+        <div class="file">pairing/</div>
+        <div class="file">wizard/</div>
+        <div class="file">plugins/</div>
+        <div class="file">plugin-sdk/</div>
+        <div class="file">providers/</div>
+        <div class="file">shared/</div>
+      </details>
+
+      <details>
+        <summary>extensions/ <span style="color:var(--fg3);font-size:.7rem">&mdash; 37 plugin extensions</span></summary>
+        <div class="file">discord/</div>
+        <div class="file">memory-core/</div>
+        <div class="file">memory-lancedb/</div>
+        <div class="file">device-pair/</div>
+        <div class="file">phone-control/</div>
+        <div class="file">voice-call/</div>
+        <div class="file">... (21 more channel plugins)</div>
+      </details>
+
+      <details>
+        <summary>skills/ <span style="color:var(--fg3);font-size:.7rem">&mdash; 51 bundled skill packs</span></summary>
+        <div class="file">discord/</div>
+        <div class="file">github/</div>
+        <div class="file">weather/</div>
+        <div class="file">1password/</div>
+        <div class="file">... (47 more skills)</div>
+      </details>
+
+      <details>
+        <summary>ui/ <span style="color:var(--fg3);font-size:.7rem">&mdash; Control UI (Lit + Vite)</span></summary>
+        <details><summary>src/ <span style="color:var(--fg3);font-size:.7rem">&mdash; 420 TypeScript files</span></summary>
+          <div class="file">views/</div>
+          <div class="file">controllers/</div>
+          <div class="file">chat/</div>
+          <div class="file">components/</div>
+        </details>
+      </details>
+
+      <details>
+        <summary>apps/ <span style="color:var(--fg3);font-size:.7rem">&mdash; Native companion apps</span></summary>
+        <details><summary>macos/ <span style="color:var(--fg3);font-size:.7rem">&mdash; SwiftUI menu bar app (~240 files)</span></summary><div class="file">OpenClawApp.swift</div></details>
+        <details><summary>ios/ <span style="color:var(--fg3);font-size:.7rem">&mdash; SwiftUI iOS app (20 modules)</span></summary><div class="file">OpenClawApp.swift</div></details>
+        <details><summary>android/ <span style="color:var(--fg3);font-size:.7rem">&mdash; Kotlin Compose Android app</span></summary><div class="file">MainActivity.kt</div></details>
+        <details><summary>shared/OpenClawKit/ <span style="color:var(--fg3);font-size:.7rem">&mdash; Protocol + Kit + ChatUI (62 files)</span></summary>
+          <div class="file">OpenClawProtocol/</div>
+          <div class="file">OpenClawKit/</div>
+          <div class="file">OpenClawChatUI/</div>
+        </details>
+      </details>
+
+      <details>
+        <summary>packages/</summary>
+        <div class="file">clawdbot/ <span style="color:var(--fg3)">(legacy redirect)</span></div>
+        <div class="file">moltbot/ <span style="color:var(--fg3)">(legacy redirect)</span></div>
+      </details>
+
+      <div class="file">docs/ <span style="color:var(--fg3)">(Mintlify documentation)</span></div>
+      <div class="file">scripts/ <span style="color:var(--fg3)">(Build + release scripts)</span></div>
+      <div class="file">test/ <span style="color:var(--fg3)">(E2E and integration tests)</span></div>
+      <div class="file">vendor/ <span style="color:var(--fg3)">(Vendored dependencies)</span></div>
+    </details>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- TECH STACK                                                  -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="section" id="tech-stack">
+  <h2><span class="sec-icon">&#128736;</span> Tech Stack</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Layer</th><th>Technology</th></tr></thead>
+      <tbody>
+        <tr><td>Runtime</td><td>Node.js &ge;22 (TypeScript, ESM)</td></tr>
+        <tr><td>Build</td><td>tsdown + Vite + pnpm workspaces</td></tr>
+        <tr><td>Gateway</td><td>ws (WebSocket) + Express 5 (HTTP)</td></tr>
+        <tr><td>CLI</td><td>Commander.js</td></tr>
+        <tr><td>Web UI</td><td>Lit 3 (Web Components) + Vite</td></tr>
+        <tr><td>macOS/iOS</td><td>Swift 6 + SwiftUI</td></tr>
+        <tr><td>Android</td><td>Kotlin + Jetpack Compose</td></tr>
+        <tr><td>Browser</td><td>Playwright-core + CDP</td></tr>
+        <tr><td>AI Models</td><td>Claude, GPT, Gemini, Qwen, MiniMax (OpenAI-compatible API)</td></tr>
+        <tr><td>Schema</td><td>Zod + TypeBox</td></tr>
+        <tr><td>Testing</td><td>Vitest + Playwright (browser tests)</td></tr>
+        <tr><td>Linting</td><td>Oxlint + Oxfmt</td></tr>
+        <tr><td>Database</td><td>SQLite (vector store) + LanceDB</td></tr>
+        <tr><td>Voice</td><td>ElevenLabs (TTS) + Deepgram (STT)</td></tr>
+        <tr><td>CI</td><td>GitHub Actions</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</main><!-- /main -->
+
+<!-- Scroll to top button -->
+<button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+<!-- ── JavaScript ─────────────────────────────────────────────── -->
+<script>
+/* ── Theme Toggle ────────────────────────────────────────────── */
+function toggleTheme(){
+  const html=document.documentElement;
+  const next=html.getAttribute('data-theme')==='dark'?'light':'dark';
+  html.setAttribute('data-theme',next);
+  localStorage.setItem('oc-theme',next);
+  updateThemeUI(next);
+}
+function updateThemeUI(t){
+  document.getElementById('themeIcon').innerHTML=t==='dark'?'&#9789;':'&#9788;';
+  document.getElementById('themeLabel').textContent=t==='dark'?'Light':'Dark';
+}
+(function(){
+  const saved=localStorage.getItem('oc-theme');
+  if(saved){document.documentElement.setAttribute('data-theme',saved);updateThemeUI(saved)}
+  else{updateThemeUI('dark')}
+})();
+
+/* ── Sidebar Toggle (mobile) ─────────────────────────────────── */
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('show');
+}
+/* Close sidebar on nav click (mobile) */
+document.querySelectorAll('.nav-links a').forEach(a=>{
+  a.addEventListener('click',()=>{
+    if(window.innerWidth<=768){
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('overlay').classList.remove('show');
+    }
+  });
+});
+
+/* ── Collapsible Nav Sections ────────────────────────────────── */
+function toggleNavSection(el){el.parentElement.classList.toggle('collapsed')}
+
+/* ── Active Nav Highlighting ─────────────────────────────────── */
+const sections=document.querySelectorAll('.section[id]');
+const navLinks=document.querySelectorAll('.nav-links a');
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      const id=e.target.id;
+      navLinks.forEach(a=>{
+        a.classList.toggle('active',a.getAttribute('href')==='#'+id);
+      });
+    }
+  });
+},{rootMargin:'-80px 0px -60% 0px',threshold:0});
+sections.forEach(s=>observer.observe(s));
+
+/* ── Search ──────────────────────────────────────────────────── */
+function handleSearch(q){
+  q=q.toLowerCase().trim();
+  sections.forEach(s=>{
+    if(!q){s.classList.remove('hidden');return}
+    const text=s.textContent.toLowerCase();
+    s.classList.toggle('hidden',!text.includes(q));
+  });
+}
+
+/* ── Scroll-to-top button ────────────────────────────────────── */
+window.addEventListener('scroll',()=>{
+  document.getElementById('scrollTop').classList.toggle('show',window.scrollY>400);
+});
+
+/* ── SVG node click helper ───────────────────────────────────── */
+function loc(hash){document.querySelector(hash)?.scrollIntoView({behavior:'smooth'})}
+
+/* ── Data Flow Animation ─────────────────────────────────────── */
+let flowIdx=-1, flowTimer=null;
+const flowSteps=document.querySelectorAll('.flow-step');
+function flowSet(i){
+  flowIdx=Math.max(-1,Math.min(i,flowSteps.length-1));
+  flowSteps.forEach((s,idx)=>s.classList.toggle('active',idx<=flowIdx));
+}
+function flowNext(){flowSet(flowIdx+1)}
+function flowPrev(){flowSet(flowIdx-1)}
+function flowReset(){clearInterval(flowTimer);flowTimer=null;flowSet(-1)}
+function flowAuto(){
+  flowReset();
+  flowTimer=setInterval(()=>{
+    flowIdx++;
+    if(flowIdx>=flowSteps.length){clearInterval(flowTimer);flowTimer=null;return}
+    flowSet(flowIdx);
+  },700);
+}
+</script>
+</body>
+</html>
